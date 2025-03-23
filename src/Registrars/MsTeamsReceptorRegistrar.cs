@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Soenneker.MsTeams.Sender.Registrars;
 using Soenneker.ServiceBus.Queue.Registrars;
 using Soenneker.ServiceBus.Receptors.MsTeams.Abstract;
 
@@ -15,8 +16,7 @@ public static class MsTeamsReceptorRegistrar
     /// </summary>
     public static IServiceCollection AddMsTeamsReceptorAsSingleton(this IServiceCollection services)
     {
-        services.AddServiceBusQueueUtilAsSingleton();
-        services.TryAddSingleton<IMsTeamsReceptor, MsTeamsReceptor>();
+        services.AddMsTeamsSenderAsScoped().AddServiceBusQueueUtilAsSingleton().TryAddSingleton<IMsTeamsReceptor, MsTeamsReceptor>();
 
         return services;
     }
