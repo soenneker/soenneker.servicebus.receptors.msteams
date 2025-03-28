@@ -24,7 +24,7 @@ public sealed class MsTeamsReceptor : ServiceBusReceptor, IMsTeamsReceptor
     {
     }
 
-    public override ValueTask OnMessageReceived(string messageContent, Type? type)
+    public override ValueTask OnMessageReceived(string messageContent, Type? type, CancellationToken cancellationToken = default)
     {
         try
         {
