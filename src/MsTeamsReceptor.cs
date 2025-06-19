@@ -34,7 +34,7 @@ public sealed class MsTeamsReceptor : ServiceBusReceptor, IMsTeamsReceptor
             if (msgModel == null)
                 throw new SerializationException($"Could not deserialize {nameof(MsTeamsMessage)} message content");
 
-            _ = BackgroundJob.Enqueue<IMsTeamsSender>(x => x.SendWebhook(msgModel, CancellationToken.None));
+            _ = BackgroundJob.Enqueue<IMsTeamsSender>(x => x.SendMessage(msgModel, CancellationToken.None));
         }
         catch (Exception e)
         {
