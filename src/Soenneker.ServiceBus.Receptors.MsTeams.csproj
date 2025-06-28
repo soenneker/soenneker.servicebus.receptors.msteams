@@ -46,6 +46,6 @@
         <PackageReference Include="Soenneker.Messages.MsTeams" Version="3.0.143" />
         <PackageReference Include="Soenneker.MsTeams.Sender" Version="3.0.227" />
         <PackageReference Include="Soenneker.ServiceBus.Receptor" Version="3.0.1712" />
-        <PackageReference Include="Soenneker.Utils.Json" Version="3.0.2332" />
+        <PackageReference Include="Soenneker.Utils.Json" Version="3.0.2338" />
     </ItemGroup>
 </Project>
