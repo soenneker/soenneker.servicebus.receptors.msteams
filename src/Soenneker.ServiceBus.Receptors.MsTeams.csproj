@@ -43,6 +43,6 @@
 
     <ItemGroup>
         <PackageReference Include="Soenneker.MsTeams.Sender" Version="4.0.320" />
-        <PackageReference Include="Soenneker.ServiceBus.Receptor" Version="3.0.1757" />
+        <PackageReference Include="Soenneker.ServiceBus.Receptor" Version="4.0.1759" />
     </ItemGroup>
 </Project>
