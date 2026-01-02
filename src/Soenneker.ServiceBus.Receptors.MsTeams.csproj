@@ -14,7 +14,7 @@
         <AssemblyName>Soenneker.ServiceBus.Receptors.MsTeams</AssemblyName>
         <PackageId>Soenneker.ServiceBus.Receptors.MsTeams</PackageId>
         <PackageTags>servicebus receptors msteams microsoft teams webhook sender hangfire msteamsreceptor util csharp dotnet c# .net</PackageTags>
-        <Copyright>Copyright © 2025 Jake Soenneker</Copyright>
+        <Copyright>Copyright © 2025-2026 Jake Soenneker</Copyright>
         <Authors>Jake Soenneker</Authors>
         <Company>https://soenneker.com</Company>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
