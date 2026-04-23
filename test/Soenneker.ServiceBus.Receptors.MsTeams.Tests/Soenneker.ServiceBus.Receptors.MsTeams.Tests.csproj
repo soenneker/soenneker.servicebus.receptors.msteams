@@ -16,20 +16,13 @@
         </Content>
     </ItemGroup>
 
-<<<<<<< HEAD
     <ItemGroup>
         <PackageReference Include="Soenneker.Utils.Test" Version="4.0.315" />
         <PackageReference Include="Soenneker.Tests.HostedUnit" Version="4.0.13" />
         <PackageReference Include="TUnit" Version="1.37.24" />
-=======
-    <ItemGroup><PackageReference Include="Soenneker.Utils.Test" Version="4.0.315" />
-        <PackageReference Include="Soenneker.Tests.FixturedUnit" Version="4.0.2305" />
-        <PackageReference Include="xUnit.v3" Version="3.2.2" />
->>>>>>> 8092044d059cde3ff07e6198e5959cc2b97cd6ef
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\Soenneker.ServiceBus.Receptors.MsTeams\Soenneker.ServiceBus.Receptors.MsTeams.csproj" />
     </ItemGroup>
 </Project>
-
