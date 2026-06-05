@@ -24,6 +24,13 @@ public sealed class MsTeamsReceptor : ServiceBusReceptor, IMsTeamsReceptor
     {
     }
 
+    /// <summary>
+    /// Executes the on message received operation.
+    /// </summary>
+    /// <param name="messageContent">The message content.</param>
+    /// <param name="type">The type.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public override ValueTask OnMessageReceived(string messageContent, string type, CancellationToken cancellationToken = default)
     {
         try
