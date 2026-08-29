@@ -14,6 +14,8 @@ public static class MsTeamsReceptorRegistrar
     /// <summary>
     /// Adds <see cref="IMsTeamsReceptor"/> as a singleton service. <para/>
     /// </summary>
+    /// <param name="services">Service collection that receives the registration.</param>
+    /// <returns>The same service collection, so additional registrations can be chained.</returns>
     public static IServiceCollection AddMsTeamsReceptorAsSingleton(this IServiceCollection services)
     {
         services.AddMsTeamsSenderAsScoped().AddServiceBusQueueUtilAsSingleton().TryAddSingleton<IMsTeamsReceptor, MsTeamsReceptor>();
