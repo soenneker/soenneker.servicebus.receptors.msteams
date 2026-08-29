@@ -16,7 +16,7 @@ using Soenneker.Utils.Json;
 
 namespace Soenneker.ServiceBus.Receptors.MsTeams;
 
-///<inheritdoc cref="IMsTeamsReceptor"/>
+/// <inheritdoc cref="IMsTeamsReceptor"/>
 public sealed class MsTeamsReceptor : ServiceBusReceptor, IMsTeamsReceptor
 {
     public MsTeamsReceptor(IServiceBusClientUtil serviceBusClientUtil, IServiceBusQueueUtil serviceBusQueueUtil, ILogger<MsTeamsReceptor> logger,
