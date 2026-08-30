@@ -7,7 +7,7 @@ using Soenneker.ServiceBus.Receptors.MsTeams.Abstract;
 namespace Soenneker.ServiceBus.Receptors.MsTeams.Registrars;
 
 /// <summary>
-/// A Hangfire-integrated Service Bus message receptor that deserializes incoming Microsoft Teams messages and enqueues them for webhook processing using a background job.
+/// Registers the Hangfire-backed <c>msteams</c> queue receptor, Teams sender, and Service Bus dependencies.
 /// </summary>
 public static class MsTeamsReceptorRegistrar
 {

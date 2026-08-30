@@ -45,7 +45,8 @@ public sealed class MsTeamsReceptor : ServiceBusReceptor, IMsTeamsReceptor
         }
         catch (Exception e)
         {
-            Logger.LogError(e, "Unable to queue job with content: {content}", messageContent);
+            Logger.LogError(e, "Unable to enqueue Microsoft Teams job for message type {type}", type);
+            throw;
         }
 
         return ValueTask.CompletedTask;
