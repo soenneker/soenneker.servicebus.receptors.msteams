@@ -1,8 +1,11 @@
-﻿using System;
+using System;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Hangfire;
+using Hangfire.Common;
+using Hangfire.States;
+using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Soenneker.Enums.JsonLibrary;
@@ -16,21 +19,23 @@ using Soenneker.Utils.Json;
 
 namespace Soenneker.ServiceBus.Receptors.MsTeams;
 
-/// <inheritdoc cref="IMsTeamsReceptor"/>
 public sealed class MsTeamsReceptor : ServiceBusReceptor, IMsTeamsReceptor
 {
+    private static readonly MethodInfo _sendMethod = typeof(IMsTeamsSender).GetMethod(nameof(IMsTeamsSender.SendMessage), [typeof(MsTeamsMessage), typeof(CancellationToken)])!;
+    private static readonly object _jobCancellationToken = CancellationToken.None;
+    private readonly IBackgroundJobClient? _backgroundJobClient;
+
+    public MsTeamsReceptor(IServiceBusClientUtil serviceBusClientUtil, IServiceBusQueueUtil serviceBusQueueUtil, ILogger<MsTeamsReceptor> logger,
+        IConfiguration config, IBackgroundJobClient backgroundJobClient) : this(serviceBusClientUtil, serviceBusQueueUtil, logger, config)
+    {
+        _backgroundJobClient = backgroundJobClient;
+    }
+
     public MsTeamsReceptor(IServiceBusClientUtil serviceBusClientUtil, IServiceBusQueueUtil serviceBusQueueUtil, ILogger<MsTeamsReceptor> logger,
         IConfiguration config) : base("msteams", logger, serviceBusClientUtil, serviceBusQueueUtil, config)
     {
     }
 
-    /// <summary>
-    /// Executes the on message received operation.
-    /// </summary>
-    /// <param name="messageContent">The message content.</param>
-    /// <param name="type">The type.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
     public override ValueTask OnMessageReceived(string messageContent, string type, CancellationToken cancellationToken = default)
     {
         try
@@ -41,7 +46,7 @@ public sealed class MsTeamsReceptor : ServiceBusReceptor, IMsTeamsReceptor
             if (msgModel == null)
                 throw new SerializationException($"Could not deserialize {nameof(MsTeamsMessage)} message content");
 
-            _ = BackgroundJob.Enqueue<IMsTeamsSender>(x => x.SendMessage(msgModel, CancellationToken.None));
+            _ = (_backgroundJobClient ?? new BackgroundJobClient()).Create(new Job(typeof(IMsTeamsSender), _sendMethod, [msgModel, _jobCancellationToken]), new EnqueuedState());
         }
         catch (Exception e)
         {
