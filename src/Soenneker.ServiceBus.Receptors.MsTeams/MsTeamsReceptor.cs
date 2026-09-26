@@ -8,7 +8,6 @@ using Hangfire.States;
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Soenneker.Enums.JsonLibrary;
 using Soenneker.Messages.MsTeams;
 using Soenneker.MsTeams.Sender.Abstract;
 using Soenneker.ServiceBus.Client.Abstract;
@@ -40,8 +39,7 @@ public sealed class MsTeamsReceptor : ServiceBusReceptor, IMsTeamsReceptor
     {
         try
         {
-            // Cannot be System.Text.Json just yet because of the JsonConverter on the AdaptiveCard library class
-            var msgModel = JsonUtil.Deserialize<MsTeamsMessage>(messageContent, JsonLibraryType.Newtonsoft);
+            var msgModel = JsonUtil.Deserialize(messageContent, MsTeamsJsonContext.Default.MsTeamsMessage);
 
             if (msgModel == null)
                 throw new SerializationException($"Could not deserialize {nameof(MsTeamsMessage)} message content");
