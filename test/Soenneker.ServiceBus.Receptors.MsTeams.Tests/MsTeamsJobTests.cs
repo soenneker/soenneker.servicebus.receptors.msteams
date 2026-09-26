@@ -23,12 +23,14 @@ public class MsTeamsJobTests
         var client = new RecordingJobs();
         var receptor = new Soenneker.ServiceBus.Receptors.MsTeams.MsTeamsReceptor(null!, null!,
             NullLogger<Soenneker.ServiceBus.Receptors.MsTeams.MsTeamsReceptor>.Instance, Fixture.Config(), client);
-        await receptor.OnMessageReceived("{\"msTeamsCard\":{\"type\":\"message\",\"attachments\":[]},\"channel\":\"audit\"}", "teams");
+        await receptor.OnMessageReceived("""
+            {"type":"msteams","id":"audit-id","queue":"msteams","sender":"audit","createdAt":"2026-01-01T00:00:00Z","msTeamsCard":{"type":"message","attachments":[]},"channel":"audit"}
+            """, "teams");
         Check(client.Job!.Type == typeof(Soenneker.MsTeams.Sender.Abstract.IMsTeamsSender) && client.Job.Method.Name == "SendMessage", "Wrong Teams target");
         Check(((Soenneker.Messages.MsTeams.MsTeamsMessage)client.Job.Args[0]).Channel == "audit", "Teams payload lost");
         Check((CancellationToken)client.Job.Args[1] == CancellationToken.None, "Wrong Teams cancellation token");
         try { await receptor.OnMessageReceived("invalid", "teams"); throw new Exception("Invalid JSON was swallowed"); }
-        catch (Newtonsoft.Json.JsonException) { }
+        catch (System.Text.Json.JsonException) { }
     }
     private sealed class RecordingJobs : IBackgroundJobClient
     {
