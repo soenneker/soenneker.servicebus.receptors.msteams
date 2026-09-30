@@ -18,7 +18,7 @@ public class MsTeamsJobTests
         if (!condition) throw new InvalidOperationException(message);
     }
     [Test]
-    public async Task TeamsJobPreservesDeserializedPayloadAndFailurePropagation()
+    public async ValueTask TeamsJobPreservesDeserializedPayloadAndFailurePropagation()
     {
         var client = new RecordingJobs();
         var receptor = new Soenneker.ServiceBus.Receptors.MsTeams.MsTeamsReceptor(null!, null!,
