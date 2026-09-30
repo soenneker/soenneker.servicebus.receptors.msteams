@@ -41,7 +41,7 @@ Dispose the receptor during shutdown so its Service Bus processor stops cleanly.
 
 ## Message contract
 
-The Service Bus body must be a JSON representation of `Soenneker.Messages.MsTeams.MsTeamsMessage`. Newtonsoft.Json is used because the Adaptive Card model used by the message has a Newtonsoft converter.
+The Service Bus body must be a JSON representation of `Soenneker.Messages.MsTeams.MsTeamsMessage`. Deserialization uses System.Text.Json with the generated `MsTeamsJsonContext`.
 
 After deserialization, the receptor enqueues this Hangfire call:
 
