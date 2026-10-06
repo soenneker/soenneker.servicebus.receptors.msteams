@@ -20,7 +20,7 @@ namespace Soenneker.ServiceBus.Receptors.MsTeams;
 
 public sealed class MsTeamsReceptor : ServiceBusReceptor, IMsTeamsReceptor
 {
-    private static readonly MethodInfo _sendMethod = typeof(IMsTeamsSender).GetMethod(nameof(IMsTeamsSender.SendMessage), [typeof(MsTeamsMessage), typeof(CancellationToken)])!;
+    private static readonly MethodInfo _sendMethod = ((System.Linq.Expressions.MethodCallExpression)((System.Linq.Expressions.Expression<Action<IMsTeamsSender>>)(sender => sender.SendMessage(default!, default))).Body).Method;
     private static readonly object _jobCancellationToken = CancellationToken.None;
     private readonly IBackgroundJobClient? _backgroundJobClient;
 
