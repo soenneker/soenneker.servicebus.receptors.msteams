@@ -1,51 +1,88 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Hangfire;
-using Hangfire.Common;
-using Hangfire.States;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using NSubstitute;
+using Soenneker.Flywheel.Communication.Dtos;
+using Soenneker.Flywheel.Core.Services.Abstract;
+using Soenneker.Messages.MsTeams;
+using Soenneker.MsTeams.Sender.Abstract;
+using Soenneker.ServiceBus.Receptors.MsTeams.Registrars;
 
-namespace Audit;
+namespace Soenneker.ServiceBus.Receptors.MsTeams.Tests;
 
 public class MsTeamsJobTests
 {
-    private static void Check(bool condition, string message)
-    {
-        if (!condition) throw new InvalidOperationException(message);
-    }
-    [Test]
-    public async Task TeamsJobPreservesDeserializedPayloadAndFailurePropagation(CancellationToken cancellationToken)
-    {
-        var client = new RecordingJobs();
-        var receptor = new Soenneker.ServiceBus.Receptors.MsTeams.MsTeamsReceptor(null!, null!,
-            NullLogger<Soenneker.ServiceBus.Receptors.MsTeams.MsTeamsReceptor>.Instance, Fixture.Config(), client);
-        await receptor.OnMessageReceived("""
-            {"type":"msteams","id":"audit-id","queue":"msteams","sender":"audit","createdAt":"2026-01-01T00:00:00Z","msTeamsCard":{"type":"message","attachments":[]},"channel":"audit"}
-            """, "teams", cancellationToken: cancellationToken);
-        Check(client.Job!.Type == typeof(Soenneker.MsTeams.Sender.Abstract.IMsTeamsSender) && client.Job.Method.Name == "SendMessage", "Wrong Teams target");
-        Check(((Soenneker.Messages.MsTeams.MsTeamsMessage)client.Job.Args[0]).Channel == "audit", "Teams payload lost");
-        Check((CancellationToken)client.Job.Args[1] == CancellationToken.None, "Wrong Teams cancellation token");
-        try { await receptor.OnMessageReceived("invalid", "teams", cancellationToken: cancellationToken); throw new Exception("Invalid JSON was swallowed"); }
-        catch (System.Text.Json.JsonException) { }
-    }
-    private sealed class RecordingJobs : IBackgroundJobClient
-    {
-        public Job? Job; public IState? State;
-        public string Create(Job job, IState state) { Job = job; State = state; return "1"; }
-        public bool ChangeState(string jobId, IState state, string expectedState) => true;
-    }
-}
+    private const string Payload = """
+        {"type":"msteams","id":"audit-id","queue":"msteams","sender":"audit","createdAt":"2026-01-01T00:00:00Z","msTeamsCard":{"type":"message","attachments":[]},"channel":"audit"}
+        """;
 
-internal static class Fixture
-{
-    public static Microsoft.Extensions.Configuration.IConfiguration Config(bool logging = false, bool counts = true) =>
-        new Microsoft.Extensions.Configuration.ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+    private static MsTeamsReceptor CreateReceptor(IJobClient jobs)
+    {
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
-            ["Azure:ServiceBus:Enable"] = "true", ["Azure:ServiceBus:TransmitterLogging"] = logging.ToString(),
-            ["Background:QueueLength"] = "32", ["Background:LockCounts"] = counts.ToString()
+            ["Azure:ServiceBus:Enable"] = "true", ["Background:QueueLength"] = "32"
         }).Build();
+        return new MsTeamsReceptor(null!, null!, NullLogger<MsTeamsReceptor>.Instance, config, jobs);
+    }
+
+    [Test]
+    public async Task TeamsJobPreservesDeserializedPayloadAndCancellation(CancellationToken cancellationToken)
+    {
+        var jobs = Substitute.For<IJobClient>();
+        await CreateReceptor(jobs).OnMessageReceived(Payload, "teams", cancellationToken);
+        await jobs.Received(1).Enqueue(Arg.Is<JobDefinition<MsTeamsMessage>>(j => j.Name == "soenneker.msteams.send.v1"),
+            Arg.Is<MsTeamsMessage>(m => m.Id == "audit-id" && m.Channel == "audit" && m.MsTeamsCard != null),
+            cancellationToken: cancellationToken);
+    }
+
+    [Test]
+    [Arguments("invalid")]
+    [Arguments("null")]
+    public async Task InvalidPayloadDoesNotEnqueue(string payload)
+    {
+        var jobs = Substitute.For<IJobClient>();
+        bool failed = false;
+        try { await CreateReceptor(jobs).OnMessageReceived(payload, "teams"); }
+        catch (Exception e) when (e is JsonException or SerializationException) { failed = true; }
+        if (!failed || jobs.ReceivedCalls().Any()) throw new InvalidOperationException("Invalid payload was accepted.");
+    }
+
+    [Test]
+    public async Task EnqueueFailurePropagatesAfterPersistenceCompletes()
+    {
+        var jobs = Substitute.For<IJobClient>();
+        var pending = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        jobs.Enqueue(Arg.Any<JobDefinition<MsTeamsMessage>>(), Arg.Any<MsTeamsMessage>()).Returns(pending.Task);
+        Task handling = CreateReceptor(jobs).OnMessageReceived(Payload, "teams").AsTask();
+        if (handling.IsCompleted) throw new InvalidOperationException("Message completed before persistence.");
+        var failure = new InvalidOperationException("Store unavailable");
+        pending.SetException(failure);
+        try { await handling; }
+        catch (InvalidOperationException e) when (ReferenceEquals(e, failure)) { return; }
+        throw new InvalidOperationException("Enqueue failure was swallowed.");
+    }
+
+    [Test]
+    public async Task RegisteredJobInvokesScopedSender(CancellationToken cancellationToken)
+    {
+        var sender = Substitute.For<IMsTeamsSender>();
+        var services = new ServiceCollection();
+        services.AddScoped<IMsTeamsSender>(_ => sender);
+        services.AddMsTeamsReceptorAsSingleton();
+        services.AddMsTeamsReceptorAsSingleton();
+        await using ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        using IServiceScope scope = provider.CreateScope();
+        IJobInvoker invoker = provider.GetServices<IJobInvoker>().Single();
+        var message = JsonSerializer.Deserialize(Payload, MsTeamsJsonContext.Default.MsTeamsMessage)!;
+        string persisted = JsonSerializer.Serialize(message, MsTeamsJsonContext.Default.MsTeamsMessage);
+        await invoker.Invoke(scope.ServiceProvider, persisted, cancellationToken);
+        await sender.Received(1).SendMessage(Arg.Is<MsTeamsMessage>(m => m.Channel == "audit" && m.Id == "audit-id"), cancellationToken);
+    }
 }

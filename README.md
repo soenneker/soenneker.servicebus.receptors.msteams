@@ -5,7 +5,7 @@
 
 # Soenneker.ServiceBus.Receptors.MsTeams
 
-Consumes messages from the `msteams` Azure Service Bus queue, deserializes `MsTeamsMessage` bodies, and hands them to `IMsTeamsSender` through Hangfire.
+Consumes messages from the `msteams` Azure Service Bus queue, deserializes `MsTeamsMessage` bodies, and hands them to `IMsTeamsSender` through Flywheel.
 
 ## Installation
 
@@ -17,7 +17,7 @@ dotnet add package Soenneker.ServiceBus.Receptors.MsTeams
 
 Configure `Azure:ServiceBus:ConnectionString`. The credential needs queue-management and receive permissions because initialization creates the `msteams` queue when absent and starts a processor.
 
-Configure Hangfire storage and run a Hangfire server. The registrar adds `IMsTeamsSender` as a scoped service so Hangfire can resolve it for each job.
+Configure Flywheel storage and workers. Include `[JsonSerializable(typeof(MsTeamsMessage))]` in the JSON context supplied to Flywheel, or use `MsTeamsJsonContext.Default` when Teams is the only payload. The registrar adds the job invoker and `IMsTeamsSender` as a scoped service for each execution.
 
 ## Register and start
 
@@ -41,24 +41,24 @@ Dispose the receptor during shutdown so its Service Bus processor stops cleanly.
 
 ## Message contract
 
-The Service Bus body must be a JSON representation of `Soenneker.Messages.MsTeams.MsTeamsMessage`. Newtonsoft.Json is used because the Adaptive Card model used by the message has a Newtonsoft converter.
+The Service Bus body must be a JSON representation of `Soenneker.Messages.MsTeams.MsTeamsMessage`. Deserialization uses the source-generated `MsTeamsJsonContext` with System.Text.Json.
 
-After deserialization, the receptor enqueues this Hangfire call:
+After deserialization, the receptor enqueues this Flywheel call:
 
 ```csharp
 IMsTeamsSender.SendMessage(
     message,
-    CancellationToken.None)
+    cancellationToken)
 ```
 
 The Service Bus `ApplicationProperties["type"]` value is accepted by the base receptor but is not used to choose a Teams DTO or sender path in this implementation.
 
-The job intentionally receives `CancellationToken.None` rather than the short-lived Service Bus delivery token. Hangfire manages cancellation for the eventual background execution.
+The Service Bus delivery token is used while persisting the job. The sender receives the Flywheel execution token when a worker invokes the job.
 
 ## Delivery behavior
 
-The Service Bus message is completed only after its body is deserialized and Hangfire accepts the job. Deserialization or enqueue failures flow back to the processor, leaving the broker message unsettled for retry and eventual dead-lettering according to queue policy.
+The Service Bus message is completed only after its body is deserialized and Flywheel persists the job. Deserialization or enqueue failures flow back to the processor, leaving the broker message unsettled for retry and eventual dead-lettering according to queue policy.
 
-Delivery is at least once across the handoff. If Hangfire persists a job but Service Bus completion fails, another delivery can enqueue the same Teams message again. Use a stable message identifier or another idempotency mechanism when duplicate webhook posts are unacceptable.
+Delivery is at least once across the handoff. If Flywheel persists a job but Service Bus completion fails, another delivery can enqueue the same Teams message again. Use a stable message identifier or another idempotency mechanism when duplicate webhook posts are unacceptable.
 
-Message bodies can contain webhook URLs and user-supplied card content. This receptor does not write failed bodies to its own error log; apply the same care to upstream Service Bus logging and Hangfire argument storage.
+Message bodies can contain webhook URLs and user-supplied card content. This receptor does not write failed bodies to its own error log; apply the same care to upstream Service Bus logging and Flywheel argument storage.
