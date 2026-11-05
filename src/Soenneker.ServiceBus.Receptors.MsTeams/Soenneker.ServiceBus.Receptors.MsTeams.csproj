@@ -46,7 +46,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Soenneker.Flywheel.Core" Version="11.0.465" />
+        <PackageReference Include="Soenneker.Flywheel.Core" Version="11.0.466" />
         <PackageReference Include="Soenneker.MsTeams.Sender" Version="11.0.1088" />
         <PackageReference Include="Soenneker.ServiceBus.Receptor" Version="11.0.2105" />
     </ItemGroup>
